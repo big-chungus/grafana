@@ -309,6 +309,31 @@ describe('transformSaveModelSchemaV2ToScene', () => {
     });
   });
 
+  describe('when the stored spec has null where a list is expected', () => {
+    // The v2 API stores null for every list the request body left out.
+    function loadWithNullLists() {
+      const dashboard = cloneDeep(defaultDashboard);
+      Object.assign(dashboard.spec, { annotations: null, links: null, tags: null, variables: null });
+      Object.assign(dashboard.spec.timeSettings, { autoRefreshIntervals: null });
+
+      return transformSaveModelSchemaV2ToScene(dashboard);
+    }
+
+    it('loads the dashboard without links', () => {
+      expect(loadWithNullLists().state.links).toEqual([]);
+    });
+
+    it('loads the dashboard without tags', () => {
+      expect(loadWithNullLists().state.tags).toEqual([]);
+    });
+
+    it('only adds the built-in annotation layer', () => {
+      const dataLayers = loadWithNullLists().state.$data as DashboardDataLayerSet;
+
+      expect(dataLayers.state.annotationLayers.map((layer) => layer.state.name)).toEqual(['Annotations & Alerts']);
+    });
+  });
+
   it('should set panel ds if it is mixed DS', () => {
     const dashboard = cloneDeep(defaultDashboard);
     getPanelElement(dashboard.spec, 'panel-1')?.spec.data.spec.queries.push({
