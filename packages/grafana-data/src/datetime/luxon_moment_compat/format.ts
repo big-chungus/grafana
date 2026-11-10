@@ -94,8 +94,17 @@ const PADDED_PARSING_TOKEN_MAP: Record<string, string> = {
   kk: 'HH',
 };
 
+// Moment applies a meridiem to 24-hour tokens (`01:45 PM` parsed as `HH:mm A` is 13:45), while Luxon
+// throws when a parse format combines `H` with `a`. Parse them as the equivalent 12-hour moment tokens.
+const MERIDIEM_HOUR_TOKEN_MAP: Record<string, string> = {
+  HH: 'hh',
+  H: 'h',
+  kk: 'hh',
+  k: 'h',
+};
+
 const TOKEN_PATTERN = new RegExp(
-  `\\[([^\\]]+)\\]|'|Do|${Object.keys(PARSING_TOKEN_MAP)
+  `\\[([^\\]]+)\\]|'|Do|${Object.keys({ ...PARSING_TOKEN_MAP, ...MERIDIEM_HOUR_TOKEN_MAP })
     .sort((a, b) => b.length - a.length)
     .join('|')}`,
   'g'
@@ -143,8 +152,15 @@ function convertFormat(
     // Moment escapes literals using backslashes while Luxon expects quoted literals.
     // Normalize `\x` to `[x]` first so we can reuse the existing escaped-text handling.
     const withEscapedLiterals = format.replace(/\\(.)/g, '[$1]');
+    const hoursUseMeridiem = mode !== 'format' && hasMeridiemToken(withEscapedLiterals);
     const luxonFormat = withEscapedLiterals.replace(TOKEN_PATTERN, (match, escapedText?: string) =>
-      replaceMomentToken(match, escapedText, omitZoneName, mode, locale)
+      replaceMomentToken(
+        (hoursUseMeridiem && MERIDIEM_HOUR_TOKEN_MAP[match]) || match,
+        escapedText,
+        omitZoneName,
+        mode,
+        locale
+      )
     );
 
     converted = {
@@ -158,6 +174,11 @@ function convertFormat(
   }
 
   return converted;
+}
+
+function hasMeridiemToken(format: string): boolean {
+  // Escaped text is matched together with its brackets, so a literal `[A]` is not a meridiem token.
+  return format.match(TOKEN_PATTERN)?.some((token) => token === 'A' || token === 'a') ?? false;
 }
 
 function replaceMomentToken(
