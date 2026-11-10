@@ -74,7 +74,7 @@ export function buildVizPanelState(
 
   titleItems.push(
     new VizPanelLinks({
-      rawLinks: panel.spec.links,
+      rawLinks: panel.spec.links ?? [],
       menu: new VizPanelLinksMenu({ $behaviors: [panelLinksBehavior] }),
     })
   );
@@ -276,7 +276,7 @@ function createPanelDataProvider(
   // Wrap inner data provider in a data transformer
   return new SceneDataTransformer({
     $data: dataProvider,
-    transformations: panel.data.spec.transformations.map((t) => {
+    transformations: (panel.data.spec.transformations ?? []).map((t) => {
       const normalized = normalizeTransformation(t);
       return {
         id: normalized.group,

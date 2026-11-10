@@ -1,4 +1,4 @@
-import { VizPanel } from '@grafana/scenes';
+import { SceneDataTransformer, type SceneObject, VizPanel } from '@grafana/scenes';
 import {
   defaultDataQueryKind,
   defaultFieldConfigSource,
@@ -12,6 +12,7 @@ import {
 import { SHARED_DASHBOARD_QUERY } from 'app/plugins/datasource/dashboard/constants';
 import { MIXED_DATASOURCE_NAME } from 'app/plugins/datasource/mixed/MixedDataSource';
 
+import { VizPanelLinks } from '../../scene/PanelLinks';
 import { PlanPlaceholderBadge } from '../../scene/PlanPlaceholderBadge';
 import { PanelTimeRange } from '../../scene/panel-timerange/PanelTimeRange';
 import { vizPanelToSchemaV2 } from '../transformSceneToSaveModelSchemaV2';
@@ -474,6 +475,27 @@ describe('buildVizPanel', () => {
     const viz = buildVizPanel(buildPanelWithQueryOptions({}));
 
     expect(viz.state.$timeRange).toBeUndefined();
+  });
+
+  // The v2 API stores null for every list the request body left out.
+  it('builds a data transformer without transformations when they are stored as null', () => {
+    const panel = buildPanelWithQueryOptions({});
+    Object.assign(panel.spec.data.spec, { transformations: null });
+
+    const viz = buildVizPanel(panel);
+
+    expect(viz.state.$data).toBeInstanceOf(SceneDataTransformer);
+    expect((viz.state.$data as SceneDataTransformer).state.transformations).toEqual([]);
+  });
+
+  it('builds a panel without links when they are stored as null', () => {
+    const panel = buildPanelWithQueryOptions({});
+    Object.assign(panel.spec, { links: null });
+
+    const viz = buildVizPanel(panel);
+
+    const panelLinks = (viz.state.titleItems as SceneObject[]).find((item) => item instanceof VizPanelLinks);
+    expect(panelLinks?.state.rawLinks).toEqual([]);
   });
 
   describe('hoverHeader interaction with time range', () => {
