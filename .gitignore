@@ -72,7 +72,12 @@ public/css/*.min.css
 .zed/*
 !.zed/debug.json
 .vs/
-.cursor/
+.cursor/*
+!.cursor/environment.json
+!.cursor/install.sh
+!.cursor/node-env.sh
+!.cursor/start.sh
+!.cursor/README.md
 .devcontainer/
 .agents/
 .claude/*
