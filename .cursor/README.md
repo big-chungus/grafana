@@ -2,12 +2,12 @@
 
 Scripts that prepare a Cursor Cloud Agent VM for Grafana development.
 
-| File | Runs | Does |
-| --- | --- | --- |
-| `install.sh` | Once per environment build, on the default branch, before the snapshot | Pinned Go (`go.mod`) into `/usr/local/go`, pinned Node (`.nvmrc`) and pnpm (`packageManager`), `pnpm install --frozen-lockfile`, `go mod download`, the same backend build `make run` does, a warm `go test` compile cache, `pnpm run dev` into `public/build` |
-| `start.sh` | On every agent boot, detached, once the environment's saved configuration contains it; by hand before that | `make run` in tmux session `grafana-backend` and `pnpm start` in tmux session `grafana-frontend`, then waits until the login page loads |
-| `node-env.sh` | Sourced by hand | Puts the pinned Node and pnpm first on `PATH` |
-| `environment.json` | Read by Cursor when the environment records this file | Points `install` and `start` at the scripts above |
+| File               | Runs                                                                                                       | Does                                                                                                                                                                                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `install.sh`       | Once per environment build, on the default branch, before the snapshot                                     | Pinned Go (`go.mod`) into `/usr/local/go`, pinned Node (`.nvmrc`) and pnpm (`packageManager`), `pnpm install --frozen-lockfile`, `go mod download`, the same backend build `make run` does, a warm `go test` compile cache, `pnpm run dev` into `public/build` |
+| `start.sh`         | On every agent boot, detached, once the environment's saved configuration contains it; by hand before that | `make run` in tmux session `grafana-backend` and `pnpm start` in tmux session `grafana-frontend`, then waits until the login page loads                                                                                                                        |
+| `node-env.sh`      | Sourced by hand                                                                                            | Puts the pinned Node and pnpm first on `PATH`                                                                                                                                                                                                                  |
+| `environment.json` | Read by Cursor when the environment records this file                                                      | Points `install` and `start` at the scripts above                                                                                                                                                                                                              |
 
 The environment is dashboard-managed. The dashboard does not read these files: it runs the
 copy of `install.sh` and `start.sh` that was last saved there, and until a configuration with
@@ -38,9 +38,9 @@ exit code in `start-user.status` next to it.
 Measured on two fresh boots of the environment build, on a branch with no Go changes:
 
 | After launching `start.sh` | Boot 1 | Boot 2 |
-| --- | --- | --- |
-| Both servers answer | 29 s | 33 s |
-| Login page loads | 38 s | 42 s |
+| -------------------------- | ------ | ------ |
+| Both servers answer        | 29 s   | 33 s   |
+| Login page loads           | 38 s   | 42 s   |
 
 The page comes later because the backend's first start on a VM sets off a second rspack
 compile of 8 to 10 s, and the dev server holds every request until it is done. On those boots
@@ -62,9 +62,9 @@ always your working tree.
 
 Once started, both servers keep running, so do not start second copies:
 
-| tmux session | Command | Log | Reloads on |
-| --- | --- | --- | --- |
-| `grafana-backend` | `make run` (air) | `/tmp/grafana/grafana-backend.log` | Go, `conf/` and `public/views` changes: rebuilds and restarts the server |
+| tmux session       | Command                                     | Log                                 | Reloads on                                                                |
+| ------------------ | ------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------- |
+| `grafana-backend`  | `make run` (air)                            | `/tmp/grafana/grafana-backend.log`  | Go, `conf/` and `public/views` changes: rebuilds and restarts the server  |
 | `grafana-frontend` | `pnpm start` (rspack dev server on `:3333`) | `/tmp/grafana/grafana-frontend.log` | Frontend changes: recompiles in 2 to 6 s and hot-swaps into the open page |
 
 The UI is served from the working tree, not from the `public/build` baked into the snapshot. A
