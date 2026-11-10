@@ -255,7 +255,7 @@ export const ResourceEditFormSharedFields = memo<DashboardEditFormSharedFieldsPr
                         ? t(
                             'provisioned-resource-form.save-or-delete-resource-shared-fields.description-folder-with-base-path',
                             'Folder inside {{basePath}}. Leave empty to save in {{basePath}}.',
-                            { basePath: repoBasePath }
+                            { basePath: repoBasePath, interpolation: { escapeValue: false } }
                           )
                         : t(
                             'provisioned-resource-form.save-or-delete-resource-shared-fields.description-folder',
