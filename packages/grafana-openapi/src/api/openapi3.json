@@ -2575,7 +2575,7 @@
             "type": "array"
           },
           "execErrState": {
-            "enum": ["OK", "Alerting", "Error"],
+            "enum": ["OK", "Alerting", "Error", "KeepLast"],
             "type": "string"
           },
           "for": {
@@ -2598,7 +2598,7 @@
             "type": "integer"
           },
           "noDataState": {
-            "enum": ["Alerting", "NoData", "OK"],
+            "enum": ["Alerting", "NoData", "OK", "KeepLast"],
             "type": "string"
           },
           "notification_settings": {
@@ -3275,7 +3275,7 @@
             "type": "array"
           },
           "exec_err_state": {
-            "enum": ["OK", "Alerting", "Error"],
+            "enum": ["OK", "Alerting", "Error", "KeepLast"],
             "type": "string"
           },
           "for": {
@@ -3305,7 +3305,7 @@
             "type": "string"
           },
           "no_data_state": {
-            "enum": ["Alerting", "NoData", "OK"],
+            "enum": ["Alerting", "NoData", "OK", "KeepLast"],
             "type": "string"
           },
           "rule_group": {
@@ -6152,7 +6152,7 @@
             "type": "array"
           },
           "exec_err_state": {
-            "enum": ["OK", "Alerting", "Error"],
+            "enum": ["OK", "Alerting", "Error", "KeepLast"],
             "type": "string"
           },
           "guid": {
@@ -6180,7 +6180,7 @@
             "type": "string"
           },
           "no_data_state": {
-            "enum": ["Alerting", "NoData", "OK"],
+            "enum": ["Alerting", "NoData", "OK", "KeepLast"],
             "type": "string"
           },
           "notification_settings": {
@@ -8595,7 +8595,7 @@
             "type": "array"
           },
           "exec_err_state": {
-            "enum": ["OK", "Alerting", "Error"],
+            "enum": ["OK", "Alerting", "Error", "KeepLast"],
             "type": "string"
           },
           "is_paused": {
@@ -8611,7 +8611,7 @@
             "type": "integer"
           },
           "no_data_state": {
-            "enum": ["Alerting", "NoData", "OK"],
+            "enum": ["Alerting", "NoData", "OK", "KeepLast"],
             "type": "string"
           },
           "notification_settings": {
@@ -8903,7 +8903,7 @@
             "type": "array"
           },
           "execErrState": {
-            "enum": ["OK", "Alerting", "Error"],
+            "enum": ["OK", "Alerting", "Error", "KeepLast"],
             "type": "string"
           },
           "folderUID": {
@@ -8941,7 +8941,7 @@
             "type": "integer"
           },
           "noDataState": {
-            "enum": ["Alerting", "NoData", "OK"],
+            "enum": ["Alerting", "NoData", "OK", "KeepLast"],
             "type": "string"
           },
           "notification_settings": {

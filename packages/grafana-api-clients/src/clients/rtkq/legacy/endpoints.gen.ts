@@ -5272,7 +5272,7 @@ export type AlertRuleExportIsTheProvisionedFileExportOfModelsAlertRule = {
   condition?: string;
   dashboardUid?: string;
   data?: AlertQueryExportIsTheProvisionedExportOfModelsAlertQuery[];
-  execErrState?: 'OK' | 'Alerting' | 'Error';
+  execErrState?: 'OK' | 'Alerting' | 'Error' | 'KeepLast';
   for?: Duration;
   isPaused?: boolean;
   keepFiringFor?: Duration;
@@ -5280,7 +5280,7 @@ export type AlertRuleExportIsTheProvisionedFileExportOfModelsAlertRule = {
     [key: string]: string;
   };
   missing_series_evals_to_resolve?: number;
-  noDataState?: 'Alerting' | 'NoData' | 'OK';
+  noDataState?: 'Alerting' | 'NoData' | 'OK' | 'KeepLast';
   notification_settings?: AlertRuleNotificationSettingsExportIsTheProvisionedExportOfModelsNotificationSettings;
   panelId?: number;
   record?: RecordIsTheProvisionedExportOfModelsRecord;

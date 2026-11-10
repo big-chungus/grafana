@@ -12710,7 +12710,8 @@
           "enum": [
             "OK",
             "Alerting",
-            "Error"
+            "Error",
+            "KeepLast"
           ]
         },
         "for": {
@@ -12737,7 +12738,8 @@
           "enum": [
             "Alerting",
             "NoData",
-            "OK"
+            "OK",
+            "KeepLast"
           ]
         },
         "notification_settings": {
@@ -13442,7 +13444,8 @@
           "enum": [
             "OK",
             "Alerting",
-            "Error"
+            "Error",
+            "KeepLast"
           ]
         },
         "for": {
@@ -13476,7 +13479,8 @@
           "enum": [
             "Alerting",
             "NoData",
-            "OK"
+            "OK",
+            "KeepLast"
           ]
         },
         "rule_group": {
@@ -16367,7 +16371,8 @@
           "enum": [
             "OK",
             "Alerting",
-            "Error"
+            "Error",
+            "KeepLast"
           ]
         },
         "guid": {
@@ -16399,7 +16404,8 @@
           "enum": [
             "Alerting",
             "NoData",
-            "OK"
+            "OK",
+            "KeepLast"
           ]
         },
         "notification_settings": {
@@ -18850,7 +18856,8 @@
           "enum": [
             "OK",
             "Alerting",
-            "Error"
+            "Error",
+            "KeepLast"
           ]
         },
         "is_paused": {
@@ -18870,7 +18877,8 @@
           "enum": [
             "Alerting",
             "NoData",
-            "OK"
+            "OK",
+            "KeepLast"
           ]
         },
         "notification_settings": {
@@ -19184,7 +19192,8 @@
           "enum": [
             "OK",
             "Alerting",
-            "Error"
+            "Error",
+            "KeepLast"
           ]
         },
         "folderUID": {
@@ -19226,7 +19235,8 @@
           "enum": [
             "Alerting",
             "NoData",
-            "OK"
+            "OK",
+            "KeepLast"
           ]
         },
         "notification_settings": {

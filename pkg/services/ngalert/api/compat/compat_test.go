@@ -1,6 +1,12 @@
 package api
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -286,4 +292,55 @@ func TestApiAlertRuleGroupFromAlertRuleGroup(t *testing.T) {
 		require.Len(t, apiGroup.Rules, 1)
 		require.Equal(t, prommodel.Duration(0), apiGroup.Rules[0].KeepFiringFor)
 	})
+}
+
+// The OpenAPI enums are generated from the definitions constants, while the server validates
+// against the models constants, so a value missing from definitions is accepted by the API but
+// absent from the published spec.
+func TestStateEnumsMatchModels(t *testing.T) {
+	for _, typeName := range []string{"NoDataState", "ExecutionErrorState"} {
+		t.Run(typeName, func(t *testing.T) {
+			modelValues := stringConstValues(t, filepath.Join("..", "..", "models"), typeName)
+			require.NotEmpty(t, modelValues)
+			require.ElementsMatch(t, modelValues, stringConstValues(t, filepath.Join("..", "tooling", "definitions"), typeName))
+		})
+	}
+}
+
+func stringConstValues(t *testing.T, dir, typeName string) []string {
+	t.Helper()
+
+	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	require.NoError(t, err)
+
+	var values []string
+	fset := token.NewFileSet()
+	for _, file := range files {
+		if strings.HasSuffix(file, "_test.go") {
+			continue
+		}
+		f, err := parser.ParseFile(fset, file, nil, parser.SkipObjectResolution)
+		require.NoError(t, err)
+
+		for _, decl := range f.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.CONST {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				valueSpec := spec.(*ast.ValueSpec)
+				if ident, ok := valueSpec.Type.(*ast.Ident); !ok || ident.Name != typeName {
+					continue
+				}
+				for _, value := range valueSpec.Values {
+					lit, ok := value.(*ast.BasicLit)
+					require.Truef(t, ok, "%s: %s constant is not a string literal", fset.Position(value.Pos()), typeName)
+					unquoted, err := strconv.Unquote(lit.Value)
+					require.NoError(t, err)
+					values = append(values, unquoted)
+				}
+			}
+		}
+	}
+	return values
 }
