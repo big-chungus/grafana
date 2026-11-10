@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Cursor Cloud Agent start step. Runs detached on every agent boot; output goes to
-# /tmp/cursor/start-user/start-user.log. Safe to rerun: it only starts what is not running.
-# Exits 0 once Grafana answers /api/health and the frontend dev server serves its manifest.
+# Cursor Cloud Agent start step. Runs detached on agent boot when the environment's saved
+# configuration contains it; output then goes to /tmp/cursor/start-user/start-user.log.
+# Safe to rerun: it only starts what is not running. Exits 0 once the login page loads.
 # Self-contained on purpose: a dashboard-managed environment stores a verbatim copy.
 set -euo pipefail
 
@@ -60,6 +60,27 @@ wait_for_all() {
   done
 }
 
+# Both servers answer before a page can load: the backend's first start on a VM sets off
+# another full rspack compile, and the dev server holds every request until it is done. A held
+# request is not a failure, so one attempt is allowed to outlast that compile.
+wait_for_page() {
+  local url="$1" timeout="$2" session
+  until curl -sf -m 60 -o /dev/null "$url"; do
+    for session in "${!ready_url[@]}"; do
+      if ! "${tmux_cmd[@]}" has-session -t "=$session" 2>/dev/null; then
+        echo "$session: exited before $url loaded; see $LOG_DIR/$session.log" >&2
+        return 1
+      fi
+    done
+    if [ "$SECONDS" -ge "$timeout" ]; then
+      echo "page: $url did not load after ${timeout}s; see the logs in $LOG_DIR" >&2
+      return 1
+    fi
+    sleep 1
+  done
+  echo "page: $url loaded after ${SECONDS}s"
+}
+
 SECONDS=0
 
 # rspack dev server with hot module replacement. The backend points the browser at it, so
@@ -85,3 +106,4 @@ fi
 start_session grafana-backend "$backend_command"
 
 wait_for_all 900
+wait_for_page http://localhost:3000/login 900
