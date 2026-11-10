@@ -169,9 +169,9 @@ Build a specific plugin: `pnpm --filter @grafana-plugins/<name> dev`
 
 ### Running services
 
-- **Backend**: `make run` — builds and starts Grafana backend with hot-reload (air) on `localhost:3000`. Default login: `admin`/`admin`. Already running after boot in tmux session `grafana-backend` (log: `/tmp/grafana/grafana-backend.log`); the environment build pre-compiles it, so boot only rebuilds what your branch changed.
+- **Backend**: `make run` — builds and starts Grafana backend with hot-reload (air) on `localhost:3000`. Default login: `admin`/`admin`. Already running after boot in tmux session `grafana-backend` (log: `/tmp/grafana/grafana-backend.log`); the environment build pre-compiles it, so boot only rebuilds what your branch changed. It runs your working tree but reports the environment build's commit and branch in `/api/health` and the page footer, because `.cursor/start.sh` reuses those link flags to avoid relinking on every boot.
 - **Frontend**: `pnpm start` — starts the rspack dev server, which hot-reloads changes. The backend points the browser at it for frontend assets. Already running after boot in tmux session `grafana-frontend` (log: `/tmp/grafana/grafana-frontend.log`).
-- Do not start second copies of either. If nothing answers on `localhost:3000` and `/tmp/cursor/start-user/` does not exist, the start step did not run on this boot: `bash .cursor/start.sh` starts whichever session is missing and takes about a minute on a fresh VM; see `.cursor/README.md`.
+- Do not start second copies of either. If nothing answers on `localhost:3000` and `/tmp/cursor/start-user/` does not exist, the start step did not run on this boot: `bash .cursor/start.sh` starts whichever session is missing and takes up to a minute on a fresh VM; see `.cursor/README.md`.
 - No external databases required — Grafana uses embedded SQLite by default.
 
 ### Testing gotchas

@@ -30,20 +30,34 @@ start_session() {
   echo "$session: started '$command', log $LOG_DIR/$session.log"
 }
 
-wait_for() {
-  local session="$1" url="$2" timeout="$3"
-  until curl -sf -m 5 -o /dev/null "$url"; do
-    if ! "${tmux_cmd[@]}" has-session -t "=$session" 2>/dev/null; then
-      echo "$session: exited before $url was ready; see $LOG_DIR/$session.log" >&2
-      return 1
-    fi
-    if [ "$SECONDS" -ge "$timeout" ]; then
-      echo "$session: $url not ready after ${timeout}s; see $LOG_DIR/$session.log" >&2
-      return 1
-    fi
-    sleep 1
+declare -A ready_url=(
+  [grafana-backend]=http://localhost:3000/api/health
+  [grafana-frontend]=http://localhost:3333/public/build/assets-manifest.json
+)
+
+# Polls every session in each pass, so each "ready after" time is that session's own.
+wait_for_all() {
+  local timeout="$1" session url
+  local -a pending=("${!ready_url[@]}") waiting
+  while [ "${#pending[@]}" -gt 0 ]; do
+    waiting=()
+    for session in "${pending[@]}"; do
+      url="${ready_url[$session]}"
+      if curl -sf -m 5 -o /dev/null "$url"; then
+        echo "$session: $url ready after ${SECONDS}s"
+      elif ! "${tmux_cmd[@]}" has-session -t "=$session" 2>/dev/null; then
+        echo "$session: exited before $url was ready; see $LOG_DIR/$session.log" >&2
+        return 1
+      elif [ "$SECONDS" -ge "$timeout" ]; then
+        echo "$session: $url not ready after ${timeout}s; see $LOG_DIR/$session.log" >&2
+        return 1
+      else
+        waiting+=("$session")
+      fi
+    done
+    pending=("${waiting[@]}")
+    [ "${#pending[@]}" -eq 0 ] || sleep 1
   done
-  echo "$session: $url ready after ${SECONDS}s"
 }
 
 SECONDS=0
@@ -57,8 +71,17 @@ start_session grafana-frontend "pnpm start"
 if ! "${tmux_cmd[@]}" has-session -t "=grafana-backend" 2>/dev/null && pkill -x grafana-air; then
   timeout 30 bash -c 'while pgrep -x grafana-air >/dev/null; do sleep 0.5; done' || pkill -9 -x grafana-air || true
 fi
+# The Makefile links the commit and branch into the binary, so every new checkout would relink
+# it even when no Go code changed. Passing the values the existing binary was linked with lets
+# Go skip that link. The server then reports that commit and branch, not the checkout's.
+link_flags="$(go version -m "bin/$(go env GOOS)/$(go env GOARCH)/grafana" 2>/dev/null || true)"
+built_commit="$(sed -n 's/.*-X main\.commit=\([0-9a-f]\{40\}\) .*/\1/p' <<<"$link_flags")"
+built_branch="$(sed -n 's|.*-X main\.buildBranch=\([A-Za-z0-9._/-]\{1,\}\) .*|\1|p' <<<"$link_flags")"
+backend_command="make run"
+if [ -n "$built_commit" ] && [ -n "$built_branch" ]; then
+  backend_command="COMMIT_SHA=$built_commit BUILD_BRANCH=$built_branch make run"
+fi
 # Rebuilds only what the checked-out branch changed, then again on every Go change.
-start_session grafana-backend "make run"
+start_session grafana-backend "$backend_command"
 
-wait_for grafana-backend http://localhost:3000/api/health 900
-wait_for grafana-frontend http://localhost:3333/public/build/assets-manifest.json 900
+wait_for_all 900

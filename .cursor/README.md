@@ -15,11 +15,20 @@ too, or switch it to read `.cursor/environment.json`.
 
 ## Using it
 
-Grafana is at <http://localhost:3000> (sign in as `admin` / `admin`) about a minute after the
-VM is up. On three fresh boots of the environment build `start.sh` took 48 s, 55 s and 65 s,
-almost all of it the backend relinking for the checked-out commit; the first page load then
-took under 2 s. Restarting both servers later on the same VM took 14 s to 32 s. The first
-sign-in asks for a new password: choose Skip.
+Grafana is at <http://localhost:3000> (sign in as `admin` / `admin`) within a minute of the VM
+coming up. The first sign-in asks for a new password: choose Skip.
+
+On three fresh boots of the environment build `start.sh` took 48 s, 55 s and 65 s, and the
+first page load then took under 2 s. Of that, 38 s to 51 s was the backend relinking, because
+the Makefile links the commit and branch name into the binary. `start.sh` has since stopped
+that: it passes the commit and branch the baked binary was linked with, so a branch that
+changes no Go code skips the link. On a VM that had been up for a while this cut the build
+step from 11 s to 2 s and the whole script from 30 s to 16 s. It has not been timed on a fresh
+boot yet.
+
+The price is that **the backend reports the environment build's commit and branch**, in
+`/api/health` and in the page footer, whatever you have checked out. `git rev-parse HEAD` is
+the truth. The code that runs is always your working tree.
 
 `start` runs on boot only when the environment's saved configuration contains it; a draft build
 or an unsaved proposal does not. If `/tmp/cursor/start-user/` is missing, it did not run, so run
