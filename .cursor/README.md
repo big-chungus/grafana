@@ -16,9 +16,10 @@ too, or switch it to read `.cursor/environment.json`.
 ## Using it
 
 Grafana is at <http://localhost:3000> (sign in as `admin` / `admin`) about a minute after the
-VM is up. On two fresh boots of the environment build `start.sh` took 48 s and 55 s, almost all
-of it the backend relinking for the checked-out commit; the first page load then took under 2 s.
-Restarting both servers later on the same VM took 14 s to 32 s.
+VM is up. On three fresh boots of the environment build `start.sh` took 48 s, 55 s and 65 s,
+almost all of it the backend relinking for the checked-out commit; the first page load then
+took under 2 s. Restarting both servers later on the same VM took 14 s to 32 s. The first
+sign-in asks for a new password: choose Skip.
 
 `start` runs on boot only when the environment's saved configuration contains it; a draft build
 or an unsaved proposal does not. If `/tmp/cursor/start-user/` is missing, it did not run, so run
