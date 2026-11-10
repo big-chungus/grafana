@@ -162,15 +162,16 @@ Build a specific plugin: `pnpm --filter @grafana-plugins/<name> dev`
 
 ### Prerequisites
 
-- **Node.js** — version pinned in `.nvmrc` (check that file for the exact version). Installed via nvm and set as the nvm default. **PATH gotcha:** the infra injects `/exec-daemon/node` ahead of nvm, so the plain non-login shell may resolve `node` to an older version — check it satisfies the `engines` range in `package.json` (it does today, so builds/tests work), but it is not the pinned version. Login shells (tmux sessions, `bash -lc '...'`) get the pinned version because `~/.bashrc` prepends the nvm bin. Run `pnpm` / `pnpm start` / `jest` / rspack via a login shell (tmux or `bash -lc`) to use the pinned Node.
+- **Node.js** — version pinned in `.nvmrc` (check that file for the exact version). Installed via nvm and set as the nvm default. **PATH gotcha:** the infra injects `/exec-daemon/node` ahead of nvm, so the plain non-login shell may resolve `node` to an older version — check it satisfies the `engines` range in `package.json` (it does today, so builds/tests work), but it is not the pinned version. Login shells resolve it too, and `nvm use` does not help because it only swaps nvm's own `PATH` entry. Run `source .cursor/node-env.sh` before `pnpm` / `pnpm start` / `jest` / rspack to use the pinned Node and pnpm. See `.cursor/README.md` for the environment's install/start scripts and commands.
 - **Go** — version pinned in `go.mod` (check that file for the exact version), installed at `/usr/local/go` and symlinked to `/usr/local/bin/go`. The distro `/usr/bin/go` is older; `/usr/local/bin` wins in PATH so `go` resolves correctly. If `go.mod` bumps Go, reinstall a matching toolchain into `/usr/local/go`.
 - **GCC** required for CGo/SQLite compilation of the backend.
 - Repos in this environment live under `/agent/repos/<repo>` (e.g. `/agent/repos/grafana`); this is a multi-repo workspace, not the single `~/grafana` layout described in `grafana-enterprise/AGENTS.md`.
 
 ### Running services
 
-- **Backend**: `make run` — builds and starts Grafana backend with hot-reload (air) on `localhost:3000`. Default login: `admin`/`admin`. First build takes ~3 minutes due to debug symbols (`-gcflags all=-N -l`); subsequent hot-reload rebuilds are faster.
-- **Frontend**: `pnpm start` — starts the rspack dev server, which hot-reloads changes. The backend points the browser at it for frontend assets.
+- **Backend**: `make run` — builds and starts Grafana backend with hot-reload (air) on `localhost:3000`. Default login: `admin`/`admin`. `.cursor/start.sh` runs it in tmux session `grafana-backend` (log: `/tmp/grafana/grafana-backend.log`); the environment build pre-compiles it, so a start only rebuilds what your branch changed. It runs your working tree, but `/api/health` and the page footer show the environment build's commit, not your checkout's, because `.cursor/start.sh` reuses the baked binary's link flags to avoid relinking on every boot. The branch name, in `/metrics` and the startup log only, is the build's too.
+- **Frontend**: `pnpm start` — starts the rspack dev server, which hot-reloads changes. The backend points the browser at it for frontend assets. `.cursor/start.sh` runs it in tmux session `grafana-frontend` (log: `/tmp/grafana/grafana-frontend.log`); it holds about 5 GB of memory.
+- Check before starting either: if `curl -sf -m 60 -o /dev/null http://localhost:3000/login` succeeds, both are already running, so do not start second copies. If nothing answers, run `bash -l .cursor/start.sh`: it starts whichever session is missing and returns once the login page loads, about 40 s on a fresh VM. The environment runs it on boot only once its saved configuration contains the start step; see `.cursor/README.md`.
 - No external databases required — Grafana uses embedded SQLite by default.
 
 ### Testing gotchas

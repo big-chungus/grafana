@@ -1,0 +1,5 @@
+{
+  "name": "Grafana",
+  "install": "bash .cursor/install.sh",
+  "start": "bash -l .cursor/start.sh"
+}
