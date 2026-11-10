@@ -1,4 +1,4 @@
-import { convertMomentToLuxonWithOrdinal } from './format';
+import { convertMomentToLuxonForParsing, convertMomentToLuxonWithOrdinal } from './format';
 import { DateTime } from './luxon';
 import moment from './moment';
 
@@ -161,6 +161,12 @@ describe('format', () => {
     expect(value.clone().hour(5).format('k kk')).toBe('5 05');
   });
 
+  it('keeps 24-hour output when the format also has a meridiem', () => {
+    expect(moment.utc('2024-01-05T13:45:00Z').format('YYYY-MM-DD HH:mm A')).toBe('2024-01-05 13:45 PM');
+    expect(moment.utc('2024-01-05T13:45:00Z').format('H:mm a')).toBe('13:45 pm');
+    expect(moment.utc('2024-01-05T00:05:00Z').format('kk:mm a k')).toBe('24:05 am 24');
+  });
+
   it('formats GG as the two-digit ISO week-year', () => {
     expect(moment.utc('2021-01-01T00:00:00Z').format('GG')).toBe('20');
   });
@@ -237,6 +243,31 @@ describe('formatted string parsing', () => {
 
     expect(parsed.isValid()).toBe(true);
     expect(parsed.toISOString()).toBe('2020-08-20T10:30:20.000Z');
+  });
+
+  // expected values verified against moment 2.31.0
+  it.each([
+    { input: '2024-01-05 01:45 PM', format: 'YYYY-MM-DD HH:mm A', expected: '2024-01-05T13:45:00.000Z' },
+    { input: '2024-01-05 1:45 pm', format: 'YYYY-MM-DD H:mm a', expected: '2024-01-05T13:45:00.000Z' },
+    { input: '2024-01-05 01:45 PM', format: 'YYYY-MM-DD kk:mm A', expected: '2024-01-05T13:45:00.000Z' },
+    { input: '2024-01-05 1:45 PM', format: 'YYYY-MM-DD k:mm A', expected: '2024-01-05T13:45:00.000Z' },
+    { input: '2024-01-05 12:05 am', format: 'YYYY-MM-DD HH:mm a', expected: '2024-01-05T00:05:00.000Z' },
+    { input: '2024-01-05 12:30 PM', format: 'YYYY-MM-DD kk:mm A', expected: '2024-01-05T12:30:00.000Z' },
+    { input: '01/05/2024 09:30:10 AM', format: 'MM/DD/YYYY HH:mm:ss A', expected: '2024-01-05T09:30:10.000Z' },
+  ])('applies the meridiem to the 24-hour token when parsing "$input" as "$format"', ({ input, format, expected }) => {
+    expect(moment.utc(input, format).toISOString()).toBe(expected);
+  });
+
+  it('truncates an ISO string to a format that mixes a 24-hour token and a meridiem', () => {
+    expect(moment.utc('2024-01-05T13:45:30Z', 'YYYY-MM-DD HH:mm A').toISOString()).toBe('2024-01-05T13:45:00.000Z');
+    expect(moment.utc('2024-01-05T00:05:30Z', 'YYYY-MM-DD HH:mm A').toISOString()).toBe('2024-01-05T00:05:00.000Z');
+  });
+
+  it('keeps 24-hour parsing when the meridiem letter is an escaped literal', () => {
+    expect(convertMomentToLuxonForParsing('HH:mm [A]')).toBe("H:m 'A'");
+    expect(convertMomentToLuxonForParsing('kk:mm \\a')).toBe("H:m 'a'");
+    expect(moment.utc('2024-01-05 13:45 A', 'YYYY-MM-DD HH:mm [A]').toISOString()).toBe('2024-01-05T13:45:00.000Z');
+    expect(moment.utc('2024-01-05T13:45:30Z', 'YYYY-MM-DD HH:mm [A]').toISOString()).toBe('2024-01-05T13:45:00.000Z');
   });
 });
 
