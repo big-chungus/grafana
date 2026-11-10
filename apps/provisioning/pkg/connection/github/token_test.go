@@ -3,6 +3,7 @@ package github_test
 import (
 	"encoding/base64"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -32,6 +33,27 @@ func TestGenerateJWTToken(t *testing.T) {
 		// Verify expiration is ~10 minutes
 		expiresIn := claims.ExpiresAt.Sub(claims.IssuedAt.Time)
 		assert.InDelta(t, 10*time.Minute, expiresIn, float64(time.Second))
+	})
+
+	t.Run("is accepted by GitHub when the server clock runs ahead", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			now := time.Now()
+			githubNow := now.Add(-60 * time.Second)
+
+			token, expiresAt, err := github.GenerateJWTToken(appID, common.RawSecureValue(privateKeyBase64))
+			require.NoError(t, err)
+
+			parsedToken, _, err := new(jwt.Parser).ParseUnverified(string(token), &jwt.RegisteredClaims{})
+			require.NoError(t, err)
+			claims := parsedToken.Claims.(*jwt.RegisteredClaims)
+
+			// GitHub rejects a token whose iat is in its future or whose exp is
+			// more than 10 minutes ahead, both measured on GitHub's clock.
+			assert.False(t, claims.IssuedAt.After(githubNow), "iat %s must not be after %s", claims.IssuedAt, githubNow)
+			assert.LessOrEqual(t, claims.ExpiresAt.Sub(githubNow), 10*time.Minute)
+
+			assert.True(t, expiresAt.Equal(claims.ExpiresAt.Time), "returned expiry must match the exp claim")
+		})
 	})
 
 	t.Run("fails with invalid base64", func(t *testing.T) {

@@ -14,6 +14,11 @@ const (
 	// Based on https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-json-web-token-jwt-for-a-github-app
 	// The expiration time muse max 10 minutes.
 	JWTExpirationMinutes = 10
+
+	// jwtClockSkewAllowance backdates the token so that a host clock running
+	// ahead of GitHub's does not yield an `iat` in the future or an `exp` past
+	// the 10 minute limit; GitHub rejects both with a 401.
+	jwtClockSkewAllowance = 60 * time.Second
 )
 
 // GenerateJWTToken mints a GitHub App JWT from the appID and base64-encoded PEM
@@ -36,10 +41,10 @@ func GenerateJWTToken(appID string, privateKey common.RawSecureValue) (common.Ra
 	}
 
 	// Create the JWT token
-	now := time.Now()
+	issuedAt := time.Now().Add(-jwtClockSkewAllowance)
 	claims := jwt.RegisteredClaims{
-		IssuedAt:  jwt.NewNumericDate(now),
-		ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(JWTExpirationMinutes) * time.Minute)),
+		IssuedAt:  jwt.NewNumericDate(issuedAt),
+		ExpiresAt: jwt.NewNumericDate(issuedAt.Add(time.Duration(JWTExpirationMinutes) * time.Minute)),
 		Issuer:    appID,
 	}
 
