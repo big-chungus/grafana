@@ -134,6 +134,85 @@ describe('align frames', () => {
     });
   });
 
+  describe('by automatically picked field when there is no time field', () => {
+    it('should join two tabular frames on the number field they share', () => {
+      const tableA = toDataFrame({
+        fields: [
+          { name: 'id', type: FieldType.number, values: [1, 2] },
+          { name: 'A', type: FieldType.number, values: [10, 20] },
+        ],
+      });
+      const tableB = toDataFrame({
+        fields: [
+          { name: 'id', type: FieldType.number, values: [1, 2] },
+          { name: 'B', type: FieldType.number, values: [30, 40] },
+        ],
+      });
+
+      const out = joinDataFrames({ frames: [tableA, tableB] })!;
+
+      expect(out.length).toBe(2);
+      expect(out.fields.map((f) => ({ name: f.name, values: f.values }))).toEqual([
+        { name: 'id', values: [1, 2] },
+        { name: 'A', values: [10, 20] },
+        { name: 'B', values: [30, 40] },
+      ]);
+    });
+
+    it('should join on the number field present in every frame, not the first number field of the first frame', () => {
+      const tableA = toDataFrame({
+        fields: [
+          { name: 'A', type: FieldType.number, values: [10, 20] },
+          { name: 'id', type: FieldType.number, values: [1, 2] },
+        ],
+      });
+      const tableB = toDataFrame({
+        fields: [
+          { name: 'id', type: FieldType.number, values: [2, 3] },
+          { name: 'B', type: FieldType.number, values: [30, 40] },
+        ],
+      });
+      const tableC = toDataFrame({
+        fields: [
+          { name: 'C', type: FieldType.number, values: [50, 60] },
+          { name: 'id', type: FieldType.number, values: [1, 3] },
+        ],
+      });
+
+      const out = joinDataFrames({ frames: [tableA, tableB, tableC] })!;
+
+      expect(out.length).toBe(3);
+      expect(out.fields.map((f) => ({ name: f.name, values: f.values }))).toEqual([
+        { name: 'id', values: [1, 2, 3] },
+        { name: 'A', values: [10, 20, undefined] },
+        { name: 'B', values: [undefined, 30, 40] },
+        { name: 'C', values: [50, undefined, 60] },
+      ]);
+    });
+
+    // With nothing in common there is no field to pick, so no frame can take part in the join and
+    // the result is empty rather than a guess at which unrelated columns to line up.
+    it('should return an empty frame when the frames have no number field in common', () => {
+      const tableA = toDataFrame({
+        fields: [
+          { name: 'x', type: FieldType.number, values: [1, 2] },
+          { name: 'A', type: FieldType.number, values: [10, 20] },
+        ],
+      });
+      const tableB = toDataFrame({
+        fields: [
+          { name: 'y', type: FieldType.number, values: [1, 2] },
+          { name: 'B', type: FieldType.number, values: [30, 40] },
+        ],
+      });
+
+      const out = joinDataFrames({ frames: [tableA, tableB] })!;
+
+      expect(out.length).toBe(0);
+      expect(out.fields).toEqual([]);
+    });
+  });
+
   describe('join tabular data by chosen field', () => {
     // join on gender where there are multiple values, duplicate values which can increase the rows
 
