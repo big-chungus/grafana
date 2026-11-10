@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -460,6 +461,104 @@ func TestDashboardAPIBuilder_Mutate(t *testing.T) {
 					}
 				}
 			}
+		})
+	}
+}
+
+func TestDashboardAPIBuilder_Mutate_V2OmittedLists(t *testing.T) {
+	// A request body that leaves out every list a client is likely to consider optional.
+	const body = `{
+		"apiVersion": "dashboard.grafana.app/v2",
+		"kind": "Dashboard",
+		"metadata": {"name": "omitted-lists"},
+		"spec": {
+			"title": "Omitted lists",
+			"cursorSync": "Off",
+			"preload": false,
+			"elements": {
+				"panel-1": {
+					"kind": "Panel",
+					"spec": {
+						"id": 1,
+						"title": "Panel",
+						"description": "",
+						"data": {
+							"kind": "QueryGroup",
+							"spec": {
+								"queries": [{
+									"kind": "PanelQuery",
+									"spec": {
+										"refId": "A",
+										"hidden": false,
+										"query": {"kind": "DataQuery", "group": "grafana-testdata-datasource", "version": "v0", "spec": {}}
+									}
+								}],
+								"queryOptions": {}
+							}
+						},
+						"vizConfig": {
+							"kind": "VizConfig",
+							"group": "timeseries",
+							"version": "",
+							"spec": {"options": {}, "fieldConfig": {"defaults": {}}}
+						}
+					}
+				}
+			},
+			"layout": {
+				"kind": "GridLayout",
+				"spec": {
+					"items": [{
+						"kind": "GridLayoutItem",
+						"spec": {"x": 0, "y": 0, "width": 12, "height": 8, "element": {"kind": "ElementReference", "name": "panel-1"}}
+					}]
+				}
+			},
+			"timeSettings": {"from": "now-6h", "to": "now", "autoRefresh": "", "fiscalYearStartMonth": 0, "hideTimepicker": false}
+		}
+	}`
+
+	for _, operation := range []admission.Operation{admission.Create, admission.Update} {
+		t.Run(string(operation), func(t *testing.T) {
+			dash := &dashv2.Dashboard{}
+			require.NoError(t, json.Unmarshal([]byte(body), dash))
+
+			err := (&DashboardsAPIBuilder{}).Mutate(context.Background(), admission.NewAttributesRecord(
+				dash,
+				nil,
+				dashv2.DashboardResourceInfo.GroupVersionKind(),
+				"",
+				"omitted-lists",
+				dashv2.DashboardResourceInfo.GroupVersionResource(),
+				"",
+				operation,
+				nil,
+				false,
+				nil,
+			), nil)
+			require.NoError(t, err)
+
+			stored, err := json.Marshal(dash.Spec)
+			require.NoError(t, err)
+			var spec map[string]any
+			require.NoError(t, json.Unmarshal(stored, &spec))
+
+			panel := spec["elements"].(map[string]any)["panel-1"].(map[string]any)["spec"].(map[string]any)
+			queryGroup := panel["data"].(map[string]any)["spec"].(map[string]any)
+			fieldConfig := panel["vizConfig"].(map[string]any)["spec"].(map[string]any)["fieldConfig"].(map[string]any)
+
+			empty := []any{}
+			require.Equal(t, empty, spec["annotations"], "spec.annotations")
+			require.Equal(t, empty, spec["links"], "spec.links")
+			require.Equal(t, empty, spec["tags"], "spec.tags")
+			require.Equal(t, empty, spec["variables"], "spec.variables")
+			require.Equal(t, empty, spec["timeSettings"].(map[string]any)["autoRefreshIntervals"], "spec.timeSettings.autoRefreshIntervals")
+			require.Equal(t, empty, panel["links"], "panel links")
+			require.Equal(t, empty, queryGroup["transformations"], "panel transformations")
+			require.Equal(t, empty, fieldConfig["overrides"], "panel field config overrides")
+
+			require.Len(t, queryGroup["queries"], 1, "lists sent by the client are kept")
+			require.NotContains(t, spec["timeSettings"], "quickRanges", "lists that are omitted when empty stay omitted")
 		})
 	}
 }
