@@ -21,7 +21,7 @@ import { usePRBranch } from '../../hooks/usePRBranch';
 import { type BaseProvisionedFormData } from '../../types/form';
 import { type ResourceKindKey } from '../../utils/resourceKinds';
 import { isKnownRef } from '../../utils/workflow';
-import { joinPath, splitPath } from '../utils/path';
+import { ensureFolderPathTrailingSlash, joinPath, splitPath } from '../utils/path';
 
 type SharedFieldName = 'path' | 'comment';
 
@@ -124,6 +124,12 @@ export const ResourceEditFormSharedFields = memo<DashboardEditFormSharedFieldsPr
       repositoryName: showFolderFilename ? repository?.name : undefined,
       ref: selectedBranchExists ? selectedBranch : undefined,
     });
+
+    // Git repos write files under their configured path; a local repo's path is its filesystem root.
+    const repoBasePath =
+      repository?.type && isGitProvider(repository.type) && repository.path
+        ? ensureFolderPathTrailingSlash(repository.path)
+        : '';
 
     const pathText =
       resourceType === 'folder'
@@ -244,10 +250,18 @@ export const ResourceEditFormSharedFields = memo<DashboardEditFormSharedFieldsPr
                       'provisioned-resource-form.save-or-delete-resource-shared-fields.label-repository-folder',
                       'Repository folder'
                     )}
-                    description={t(
-                      'provisioned-resource-form.save-or-delete-resource-shared-fields.description-folder',
-                      'Folder inside the repository. Leave empty for the repository root.'
-                    )}
+                    description={
+                      repoBasePath
+                        ? t(
+                            'provisioned-resource-form.save-or-delete-resource-shared-fields.description-folder-with-base-path',
+                            'Folder inside {{basePath}}. Leave empty to save in {{basePath}}.',
+                            { basePath: repoBasePath }
+                          )
+                        : t(
+                            'provisioned-resource-form.save-or-delete-resource-shared-fields.description-folder',
+                            'Folder inside the repository. Leave empty for the repository root.'
+                          )
+                    }
                   >
                     <Combobox
                       id="folder-path"
