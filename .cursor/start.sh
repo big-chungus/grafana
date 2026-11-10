@@ -15,8 +15,9 @@ mkdir -p "$LOG_DIR"
 tmux_cmd=(tmux)
 [ -f /exec-daemon/tmux.portal.conf ] && tmux_cmd=(tmux -f /exec-daemon/tmux.portal.conf)
 
-# The VM puts its own older node ahead of nvm on PATH; sessions get the .nvmrc version first.
-session_path="${NVM_DIR:-$HOME/.nvm}/versions/node/$(cat .nvmrc)/bin:$PATH"
+# The VM puts its own older node ahead of nvm on PATH. Exported rather than passed with
+# `new-session -e`: tmux gives a new pane the PATH of the client that creates it.
+export PATH="${NVM_DIR:-$HOME/.nvm}/versions/node/$(cat .nvmrc)/bin:$PATH"
 
 start_session() {
   local session="$1" command="$2"
@@ -24,7 +25,7 @@ start_session() {
     echo "$session: already running"
     return
   fi
-  "${tmux_cmd[@]}" new-session -d -s "$session" -c "$PWD" -e "PATH=$session_path" \
+  "${tmux_cmd[@]}" new-session -d -s "$session" -c "$PWD" \
     "$command 2>&1 | tee $LOG_DIR/$session.log"
   echo "$session: started '$command', log $LOG_DIR/$session.log"
 }
