@@ -15,13 +15,30 @@ too, or switch it to read `.cursor/environment.json`.
 
 ## Using it
 
-Grafana is at <http://localhost:3000> (sign in as `admin` / `admin`) once boot finishes, about
-30 seconds after the VM is up. Both servers are already running, so do not start second copies:
+Grafana is at <http://localhost:3000> (sign in as `admin` / `admin`) about a minute after the
+VM is up. On two fresh boots of the environment build `start.sh` took 48 s and 55 s, almost all
+of it the backend relinking for the checked-out commit; the first page load then took under 2 s.
+Restarting both servers later on the same VM took 14 s to 32 s.
+
+`start` runs on boot only when the environment's saved configuration contains it; a draft build
+or an unsaved proposal does not. If `/tmp/cursor/start-user/` is missing, it did not run, so run
+`bash -l .cursor/start.sh` yourself. The timings above come from running it that way: the
+automatic run on boot had not been observed when this was written.
+
+Both servers are already running after `start`, so do not start second copies:
 
 | tmux session | Command | Log | Reloads on |
 | --- | --- | --- | --- |
 | `grafana-backend` | `make run` (air) | `/tmp/grafana/grafana-backend.log` | Go, `conf/` and `public/views` changes: rebuilds and restarts the server |
-| `grafana-frontend` | `pnpm start` (rspack dev server on `:3333`) | `/tmp/grafana/grafana-frontend.log` | Frontend changes: hot module replacement in the open page |
+| `grafana-frontend` | `pnpm start` (rspack dev server on `:3333`) | `/tmp/grafana/grafana-frontend.log` | Frontend changes: recompiles in 2 to 6 s and hot-swaps into the open page |
+
+The UI is served from the working tree, not from the `public/build` baked into the snapshot. A
+changed component shows up in the open page without a reload. A value read once at module
+load, such as a static class field, only shows after a reload, so reload the page before you
+take a screenshot.
+
+For about 20 s after its first start on a VM, the backend downloads its data source plugins
+into `data/plugins` and the dev server recompiles a few times. Both settle on their own.
 
 Boot output is in `/tmp/cursor/start-user/start-user.log`, with the exit code in
 `start-user.status` next to it. Rerun `bash .cursor/start.sh` to bring back a session you
@@ -32,8 +49,10 @@ The VM puts an older `node` first on `PATH`, so start every frontend shell with
 
 ```bash
 # Backend
-go test ./pkg/services/folder/folderimpl/       # targeted Go tests
-make build-backend                              # release-flag build into bin/grafana; the running server is bin/grafana-air
+go test ./pkg/services/folder/folderimpl/       # targeted Go tests; the first run of a large package links for up to 30 s
+go build ./pkg/...                              # compile check against the baked cache
+make build-backend                              # release-flag build into bin/grafana, a full compile of over 2 min:
+                                                # the snapshot caches the dev build the running server (bin/grafana-air) uses
 tmux kill-session -t grafana-backend; bash .cursor/start.sh   # force a clean server restart
 
 # Frontend
