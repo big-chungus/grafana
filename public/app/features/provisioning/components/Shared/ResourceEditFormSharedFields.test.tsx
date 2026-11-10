@@ -563,6 +563,32 @@ describe('ResourceEditFormSharedFields', () => {
     });
   });
 
+  describe('Repository folder description', () => {
+    const rootDescription = 'Folder inside the repository. Leave empty for the repository root.';
+
+    it.each([
+      { name: 'without a trailing slash', path: 'grafana' },
+      { name: 'with a trailing slash', path: 'grafana/' },
+    ])('describes the configured git repository path $name', ({ path }) => {
+      setup({ isNew: true, repository: { ...mockRepo.github, path } });
+
+      expect(screen.getByText('Folder inside grafana/. Leave empty to save in grafana/.')).toBeInTheDocument();
+      expect(screen.queryByText(rootDescription)).not.toBeInTheDocument();
+    });
+
+    it.each([
+      { name: 'a git repository without a configured path', repository: mockRepo.github },
+      {
+        name: 'a local repository, whose path is its filesystem root',
+        repository: { ...mockRepo.local, path: '/var/lib/grafana/repos/x' },
+      },
+    ])('describes the repository root for $name', ({ repository }) => {
+      setup({ isNew: true, repository });
+
+      expect(screen.getByText(rootDescription)).toBeInTheDocument();
+    });
+  });
+
   describe('Folder suggestions', () => {
     it('should not request folder suggestions for a branch that does not exist yet', async () => {
       mockComboboxRect();
