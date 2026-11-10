@@ -3,6 +3,7 @@ package dashboard
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -143,7 +144,17 @@ func (b *DashboardsAPIBuilder) mutateDashboard(ctx context.Context, a admission.
 		meta.SetDeprecatedInternalID(internalID) // nolint:staticcheck
 	}
 
-	return b.validateDashboardIfStrict(ctx, a, migrationErr, resourceInfo)
+	if err := b.validateDashboardIfStrict(ctx, a, migrationErr, resourceInfo); err != nil {
+		return err
+	}
+
+	// After validation on purpose: the schema validator stops at the first null list and reports
+	// nothing else, so filling the lists in first would reject specs that are accepted today.
+	if v, ok := obj.(*dashboardV2.Dashboard); ok {
+		setNilListsToEmpty(reflect.ValueOf(&v.Spec))
+	}
+
+	return nil
 }
 
 // validateDashboardIfStrict validates the dashboard spec if field validation mode is strict.
@@ -178,6 +189,56 @@ func (b *DashboardsAPIBuilder) validateDashboardIfStrict(ctx context.Context, a 
 	}
 
 	return nil
+}
+
+// setNilListsToEmpty replaces nil slices with empty ones in every field that is always written to
+// JSON (no omitempty). A list the client left out of the request body decodes to nil and would be
+// stored as null, where the schema requires an array and readers of the stored spec expect one.
+func setNilListsToEmpty(v reflect.Value) {
+	switch v.Kind() {
+	case reflect.Pointer:
+		if !v.IsNil() {
+			setNilListsToEmpty(v.Elem())
+		}
+
+	case reflect.Struct:
+		for i := range v.NumField() {
+			field := v.Field(i)
+			if !field.CanSet() {
+				continue
+			}
+			if field.Kind() == reflect.Slice && field.IsNil() {
+				_, options, _ := strings.Cut(v.Type().Field(i).Tag.Get("json"), ",")
+				if !strings.Contains(options, "omitempty") {
+					field.Set(reflect.MakeSlice(field.Type(), 0, 0))
+				}
+				continue
+			}
+			setNilListsToEmpty(field)
+		}
+
+	case reflect.Slice:
+		for i := range v.Len() {
+			setNilListsToEmpty(v.Index(i))
+		}
+
+	case reflect.Map:
+		if v.Type().Elem().Kind() != reflect.Struct {
+			return
+		}
+		// Map values are not addressable, so fix up a copy and store it back.
+		iter := v.MapRange()
+		for iter.Next() {
+			value := reflect.New(v.Type().Elem()).Elem()
+			value.Set(iter.Value())
+			setNilListsToEmpty(value)
+			v.SetMapIndex(iter.Key(), value)
+		}
+
+	default:
+		// Scalars hold no lists, and interface values are free-form JSON (plugin options, query
+		// specs) that is stored as sent.
+	}
 }
 
 func mutateVariable(a admission.Attributes) error {
