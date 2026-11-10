@@ -165,7 +165,7 @@ Build a specific plugin: `pnpm --filter @grafana-plugins/<name> dev`
 - **Node.js** — version pinned in `.nvmrc` (check that file for the exact version). Installed via nvm and set as the nvm default. **PATH gotcha:** the infra injects `/exec-daemon/node` ahead of nvm, so the plain non-login shell may resolve `node` to an older version — check it satisfies the `engines` range in `package.json` (it does today, so builds/tests work), but it is not the pinned version. Login shells resolve it too, and `nvm use` does not help because it only swaps nvm's own `PATH` entry. Run `source .cursor/node-env.sh` before `pnpm` / `pnpm start` / `jest` / rspack to use the pinned Node and pnpm. See `.cursor/README.md` for the environment's install/start scripts and commands.
 - **Go** — version pinned in `go.mod` (check that file for the exact version), installed at `/usr/local/go` and symlinked to `/usr/local/bin/go`. The distro `/usr/bin/go` is older; `/usr/local/bin` wins in PATH so `go` resolves correctly. If `go.mod` bumps Go, reinstall a matching toolchain into `/usr/local/go`.
 - **GCC** required for CGo/SQLite compilation of the backend.
-- The repo is checked out at `/workspace`. In a multi-repo environment, repos live under `/agent/repos/<repo>` (e.g. `/agent/repos/grafana`) instead, not the single `~/grafana` layout described in `grafana-enterprise/AGENTS.md`.
+- Repos in this environment live under `/agent/repos/<repo>` (e.g. `/agent/repos/grafana`); this is a multi-repo workspace, not the single `~/grafana` layout described in `grafana-enterprise/AGENTS.md`.
 
 ### Running services
 

@@ -4,7 +4,7 @@
 # Self-contained on purpose: a dashboard-managed environment stores a verbatim copy.
 set -euo pipefail
 
-for d in "$(git rev-parse --show-toplevel 2>/dev/null || true)" /workspace /agent/repos/grafana; do
+for d in "$(git rev-parse --show-toplevel 2>/dev/null || true)" /agent/repos/grafana /workspace; do
   if [ -n "$d" ] && [ -f "$d/pkg/cmd/grafana/main.go" ]; then cd "$d" && break; fi
 done
 
